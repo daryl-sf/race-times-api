@@ -14,10 +14,3 @@ export const UserApi = builder.prismaNode('User', {
     updatedAt: t.expose('updatedAt', { type: 'DateTime' }),
   }),
 });
-
-export const AuthPayload = builder.simpleObject("AuthPayload", {
-  fields: (t) => ({
-    user: t.field({ type: UserApi }),
-    token: t.string(),
-  }),
-});
