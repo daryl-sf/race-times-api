@@ -10,17 +10,22 @@ builder.mutationField("login", (t) =>
       email: t.arg.string({ required: true, validate: z.email() }),
       password: t.arg.string({ required: true, validate: z.string().min(6).max(100) }),
     },
-    resolve: async (_root, { email, password }, { db, currentUser, setAuthCookie, ...ctx }) => {
+    resolve: async (_root, { email, password }, { db, setAuthCookie }) => {
       const user = await db.user.findUnique({ where: { email } });
       if (!user) throw new Error("Invalid login");
 
       const valid = await verifyPassword(password, user.password);
       if (!valid) throw new Error("Invalid login");
 
-      const token = createToken(user);
+      const updatedUser = await db.user.update({
+        where: { email },
+        data: { lastLoginAt: new Date() },
+      });
+
+      const token = createToken(updatedUser);
       setAuthCookie(token);
 
-      return user;
+      return updatedUser;
     },
   })
 );

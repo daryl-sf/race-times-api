@@ -7,7 +7,6 @@ export const UserApi = builder.prismaNode('User', {
   id: { field: "id" },
   fields: (t) => ({
     email: t.exposeString('email'),
-    name: t.exposeString('name', { nullable: true }),
     profile: t.relation('profile', { type: ProfileApi, nullable: true }),
     isAdmin: t.exposeBoolean('isAdmin'),
     createdAt: t.expose('createdAt', { type: 'DateTime' }),

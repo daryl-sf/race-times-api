@@ -9,7 +9,8 @@ builder.mutationField("createUser", (t) =>
     authScopes: { isAdmin: true },
     args: {
       email: t.arg.string({ required: true, validate: z.email() }),
-      name: t.arg.string({ required: false, validate: z.string().min(2).max(100) }),
+      firstName: t.arg.string({ required: false, validate: z.string().min(2).max(100) }),
+      lastName: t.arg.string({ required: false, validate: z.string().min(2).max(100) }),
       password: t.arg.string({ required: true, validate: z.string().min(6).max(100) }),
     },
     resolve: async (_, args, { db }) => {
@@ -18,12 +19,11 @@ builder.mutationField("createUser", (t) =>
       const user = await db.user.create({
         data: {
           email: args.email,
-          name: args.name || null,
           password: hashedPassword,
           profile: {
             create: {
-              firstName: "",
-              lastName: "",
+              firstName: args.firstName ?? "",
+              lastName: args.lastName ?? "",
             }
           }
         },

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { hashPassword } from "@/lib/auth";
 
 async function seed() {
   // Clear existing data
@@ -8,8 +9,8 @@ async function seed() {
   const alice = await prisma.user.create({
     data: {
       email: 'alice@example.com',
-      name: 'Alice',
-      password: "defaultpassword", // In a real app, ensure to hash passwords and handle securely
+      password: await hashPassword("defaultpassword"), // In a real app, ensure to hash passwords and handle securely
+      isAdmin: true,
       profile: {
         create: {
           firstName: 'Alice',
@@ -23,8 +24,7 @@ async function seed() {
   const bob = await prisma.user.create({
     data: {
       email: 'bob@example.com',
-      name: 'Bob',
-      password: "defaultpassword", // In a real app, ensure to hash passwords and handle securely
+      password: await hashPassword("defaultpassword"), // In a real app, ensure to hash passwords and handle securely
       profile: {
         create: {
           firstName: 'Bob',
