@@ -8,7 +8,6 @@ export const UserApi = builder.prismaNode('User', {
   fields: (t) => ({
     email: t.exposeString('email'),
     profile: t.relation('profile', { type: ProfileApi, nullable: true }),
-    isAdmin: t.exposeBoolean('isAdmin'),
     createdAt: t.expose('createdAt', { type: 'DateTime' }),
     updatedAt: t.expose('updatedAt', { type: 'DateTime' }),
   }),
