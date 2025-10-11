@@ -1,5 +1,5 @@
 import SchemaBuilder from '@pothos/core';
-import { DateTimeResolver } from "graphql-scalars";
+import { BigIntResolver, DateTimeResolver } from "graphql-scalars";
 import PrismaPlugin from '@pothos/plugin-prisma';
 import type PrismaTypes from '@pothos/plugin-prisma/generated';
 import { prisma } from '@/lib/prisma';
@@ -12,12 +12,13 @@ import SimpleObjectsPlugin from '@pothos/plugin-simple-objects';
 
 export interface SchemaBuilderTypes {
   Scalars: {
+    BigInt: { Input: bigint, Output: bigint };
     DateTime: { Input: Date; Output: Date };
   };
   Context: Context;
   PrismaTypes: PrismaTypes;
   AuthScopes: {
-    isAdmin: boolean;
+    // isAdmin: boolean;
     isAuthenticated: boolean;
   }
 }
@@ -32,7 +33,7 @@ export const builder = new SchemaBuilder<SchemaBuilderTypes>({
     // when this is not set, auth checks are run when event is resolved rather than when the subscription is created
     authorizeOnSubscribe: true,
     authScopes: async (context) => ({
-      isAdmin: context.currentUser?.isAdmin ?? false,
+      // isAdmin: context.currentUser?.isAdmin ?? false,
       isAuthenticated: !!context.currentUser,
     }),
   },
@@ -50,4 +51,16 @@ builder.queryType({});
 
 builder.mutationType({});
 
+builder.subscriptionType({});
+
 builder.addScalarType('DateTime', DateTimeResolver, {});
+builder.addScalarType("BigInt", BigIntResolver, {});
+
+// Enum types
+export const RaceTypeEnum = builder.enumType('RaceType', {
+  values: ['MASS', 'WAVE', 'TIME_TRIAL'] as const,
+});
+
+export const RoleEnum = builder.enumType('Role', {
+  values: ['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER'] as const,
+});
