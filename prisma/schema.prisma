@@ -9,21 +9,207 @@ generator pothos {
   provider = "prisma-pothos-types"
 }
 
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./docs/ERD.svg"
+  // You can also output PNG or PDF if you prefer
+  // output   = "./docs/ERD.png"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  MANAGER
+  OPERATOR
+  VIEWER
+}
+
+enum RaceType {
+  MASS
+  WAVE
+  TIME_TRIAL
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  UNDO
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  users     User[]
+  races     Race[]
+}
+
 model User {
-  id          String    @id @default(cuid())
-  email       String    @unique
-  password    String
-  profile     Profile?
-  isAdmin     Boolean   @default(false)
-  isActive    Boolean   @default(true)
-  lastLoginAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String          @id @default(cuid())
+  email          String          @unique
+  password       String
+  profile        Profile?
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           Role
+  timingSessions TimingSession[]
+  auditLogs      AuditLog[]
+  createdEvents  TimingEvent[]   @relation("EventCreatedBy")
+  lastLoginAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Race {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  startDate      DateTime
+  timezone       String
+  raceType       RaceType
+  createdAt      DateTime     @default(now())
+
+  waves          Wave[]
+  participants   Participant[]
+  checkpoints    Checkpoint[]
+  timingSessions TimingSession[]
+  timingEvents   TimingEvent[]
+  auditLogs      AuditLog[]
+  resultCache    ResultCache[]
+}
+
+model Wave {
+  id             String         @id @default(uuid())
+  raceId         String
+  race           Race           @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  name           String?
+  scheduledStart DateTime?
+  position       Int?
+  createdAt      DateTime       @default(now())
+  registrations  Registration[]
+}
+
+model Participant {
+  id            String         @id @default(uuid())
+  raceId        String
+  race          Race           @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  firstName     String
+  lastName      String
+  gender        String?
+  birthYear     Int?
+  country       String?
+  contactInfo   Json?
+  createdAt     DateTime       @default(now())
+  registrations Registration[]
+  timingEvents  TimingEvent[]
+  resultCache   ResultCache[]
+}
+
+model Registration {
+  id             String        @id @default(uuid())
+  participantId  String
+  participant    Participant   @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  bib            String
+  waveId         String?
+  wave           Wave?         @relation(fields: [waveId], references: [id], onDelete: SetNull)
+  seededPosition Int?
+  externalId     String?
+  createdAt      DateTime      @default(now())
+  timingEvents   TimingEvent[]
+  resultCache    ResultCache[]
+
+  @@unique([bib, participantId])
+}
+
+model Checkpoint {
+  id             String        @id @default(uuid())
+  raceId         String
+  race           Race          @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  code           String
+  name           String?
+  positionMeters Int?
+  isStart        Boolean       @default(false)
+  isFinish       Boolean       @default(false)
+  orderIndex     Int
+  createdAt      DateTime      @default(now())
+  timingEvents   TimingEvent[]
+}
+
+model TimingSession {
+  id           String        @id @default(uuid())
+  raceId       String
+  race         Race          @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  deviceId     String?
+  userId       String?
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  startedAt    DateTime      @default(now())
+  endedAt      DateTime?
+  metadata     Json?
+  timingEvents TimingEvent[]
+}
+
+model TimingEvent {
+  id              String         @id @default(uuid())
+  raceId          String
+  race            Race           @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  checkpointId    String?
+  checkpoint      Checkpoint?    @relation(fields: [checkpointId], references: [id], onDelete: SetNull)
+  participantId   String
+  participant     Participant    @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  registrationId  String?
+  registration    Registration?  @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+  timingSessionId String?
+  timingSession   TimingSession? @relation(fields: [timingSessionId], references: [id], onDelete: SetNull)
+  serverTs        DateTime       @default(now())
+  deviceTs        DateTime?
+  timeMs          BigInt
+  elapsedMs       BigInt?
+  source          String?
+  qualifier       String?
+  sequence        BigInt
+  createdById     String?
+  createdBy       User?          @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  deleted         Boolean        @default(false)
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  raceId     String
+  race       Race        @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  entityType String
+  entityId   String?
+  action     AuditAction
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ts         DateTime    @default(now())
+  before     Json?
+  after      Json?
+  reason     String?
+}
+
+model ResultCache {
+  id             String        @id @default(uuid())
+  raceId         String
+  race           Race          @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  participantId  String
+  participant    Participant   @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  registrationId String?
+  registration   Registration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+  gunTimeMs      BigInt?
+  chipTimeMs     BigInt?
+  netTimeMs      BigInt?
+  place          Int?
+  category       String?
+  updatedAt      DateTime      @default(now())
 }
 
 model Profile {
