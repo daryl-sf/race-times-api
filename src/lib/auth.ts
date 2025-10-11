@@ -13,7 +13,8 @@ export async function verifyPassword(password: string, hash: string) {
 }
 
 export function createToken(user: User) {
-  return jwt.sign(user, JWT_SECRET, { expiresIn: "7d" });
+  const { password, ...secureUser } = user;
+  return jwt.sign(secureUser, JWT_SECRET, { expiresIn: "7d" });
 }
 
 export function verifyToken(token: string) {
